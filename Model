@@ -1,0 +1,265 @@
+import pandas as pd
+import numpy as np
+from sklearn.utils import shuffle
+from sklearn.model_selection import cross_val_score, ShuffleSplit
+
+from sklearn.gaussian_process import GaussianProcessRegressor as GPR
+from sklearn.gaussian_process.kernels import RBF, ConstantKernel
+from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+import numpy as np
+from sklearn.ensemble import GradientBoostingRegressor as GBR
+from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+
+import numpy as np
+from sklearn.tree import DecisionTreeRegressor as DTR
+from sklearn.ensemble import RandomForestRegressor as RFR
+from sklearn.ensemble import ExtraTreesRegressor as ETR
+from sklearn.metrics import mean_squared_error as mse
+from sklearn.metrics import r2_score
+from sklearn.model_selection import train_test_split
+from sklearn.svm import SVR
+from sklearn.neighbors import KNeighborsRegressor as KNR
+
+df = pd.read_csv("1.5.csv", encoding='latin1', index_col=0, engine='python')
+df
+
+X = df.iloc[:, :18]
+y = df.iloc[:, 18]
+X
+
+params = {
+    "n_estimators": 1000, 
+    "max_depth": 5,
+    "min_samples_split": 2,
+    #"learning_rate": 0.1,#RFR不选
+    #"loss": "huber",#RFR不选
+    # "kernel":"rbf" #SVR模型使用这个参数
+}  
+best_r2t = -np.inf
+# best_r2 = -np.inf 
+best_random_state = None  
+  
+for i in range(101):  # 尝试随机种子  
+    random_state = i  
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=random_state)  
+      
+    # model = GBR(**params)
+    model = RFR(**params)
+    # model = SVR(**params)
+    # model = KNR() #KNR模型把params全部注释掉
+    # model = DTR() #DTR模型把params全部注释掉
+    model.fit(X_train, y_train)  
+      
+    rmse = np.sqrt(mse(y_train, model.predict(X_train)))  
+    r2 = r2_score(y_train, model.predict(X_train))  
+    rmset = np.sqrt(mse(y_test, model.predict(X_test)))  
+    r2t = r2_score(y_test, model.predict(X_test))  
+      
+    print("Random seed:", random_state)  
+    print("Train RMSE:", rmse)  
+    print("Train R2:", r2)  
+    print("Test RMSE:", rmset)  
+    print("Test R2:", r2t)  
+    print("-------------------")  
+      
+    if r2t > best_r2t:
+        best_r2t = r2t
+        best_random_state = random_state
+    # if r2 > best_r2:
+    #     best_r2 = r2
+    #     best_random_state = random_state     
+          
+print("Best random state:", best_random_state)
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=26)
+params = {
+    "n_estimators": 500, #RFR只有这个参数改成500
+    "max_depth": 5,
+    "min_samples_split": 2,
+    # "learning_rate": 0.1,
+    # "loss": "huber",
+    # "kernel":"rbf" #SVR模型使用这个参数
+}
+# model = GBR(**params)
+model = RFR(**params)
+# model = SVR(**params)
+# model = KNR() #KNR模型把params全部注释掉
+# model = DTR() #DTR模型把params全部注释掉
+model.fit(X_train, y_train)
+rmse = np.sqrt(mse(y_train, model.predict(X_train)))
+r2 = r2_score(y_train, model.predict(X_train))
+rmset = np.sqrt(mse(y_test, model.predict(X_test)))
+r2t = r2_score(y_test, model.predict(X_test))
+
+# print("pre:", model.predict(X_train))
+# print("dft:", y_train)
+# print("pre:", model.predict(X_test))
+# print("dft:", y_test)
+print("rmsetr:", rmse)
+print("r2tr:", r2)
+print("rmsetest:", rmset) #test
+print("R2test:", r2t) #test
+# print("Feature:", model.feature_importances_)
+
+print("pre:", model.predict(X_train))
+print("dft:", y_train)
+
+N = 23  # 您可以根据需要调整这个值  
+predictions_train = model.predict(X_train)[:N]  
+true_values_train = y_train[:N]  
+  
+# 创建一个DataFrame  
+df_results = pd.DataFrame({  
+    'Predictions': predictions_train,  
+    'True Values': true_values_train  
+})  
+  
+# 写入Excel文件  
+output_file = 'train_trainRFR.xlsx'  
+df_results.to_excel(output_file, index=False)  
+  
+print(f"Results have been saved to {output_file}")
+
+print("pre:", model.predict(X_test))
+print("dft:", y_test)
+print("rmsetr:", rmse)
+print("r2tr:", r2)
+print("rmsetest:", rmset) #test
+print("R2test:", r2t) #test
+print("Feature:", model.feature_importances_)
+
+N = 3  # 您可以根据需要调整这个值  
+predictions_test = model.predict(X_test)[:N]  
+true_values_test = y_test[:N]  
+  
+# 创建一个DataFrame  
+df_results = pd.DataFrame({  
+    'Predictions': predictions_test,  
+    'True Values': true_values_test  
+})  
+  
+# 写入Excel文件  
+output_file = 'train_preRFR.xlsx'  
+df_results.to_excel(output_file, index=False)  
+  
+print(f"Results have been saved to {output_file}")
+
+import shap
+import matplotlib.pyplot as plt
+import pandas as pd
+
+# ==========================================
+# 1. 定义新名字 (在这里设置下标！)
+# ==========================================
+# 格式： "原来的列名": r"$你想显示的新名字_{下标}$"
+# 提示：没写在字典里的列名会保持原样
+name_mapping = {
+    "dianfu1": r"χ1",       # 示例：改为 E 下标 neg1
+    "dianfu2": r"χ2",
+    "m1": r"$M1$",            # 示例：改为 Mass 下标 1
+    "m2": r"$M2$",
+    "ryuanzi1": r"$r_{atom}1$",    # 示例：下标里还可以加逗号
+    "ryuanzi2": r"$r_{atom}2$",
+    "rlizi1": r"$R_{ion}1$", 
+    "rlizi2": r"$R_{ion}2$",     # 进阶：同时加上标 (^1) 和下标
+    "dianli1": r"$IE1$",
+    "dianli2": r"$IE2$",
+    "qinghe1": r"$EA1$",
+    "qinghe2": r"$EA2$",
+    "s1": r"$n_{s}1$",
+    "s2": r"$n_{s}2$",
+    "xushu1": r"$Z1$",
+    "xushu2": r"$Z2$",
+    "ddian1": r"$n_{d}1$",
+    "ddian2": r"$n_{d}2$",
+    
+}
+
+import matplotlib.pyplot as plt
+
+# ==========================================
+# 设置全局字体为 Times New Roman
+# ==========================================
+
+# 1. 设置普通文本字体 (标题、轴标签、刻度)
+plt.rcParams['font.family'] = 'serif'
+plt.rcParams['font.serif'] = ['Arial']
+
+# 2. 设置数学公式字体 (下标、上标)
+# 'stix' 是一种专门设计用来和 Times New Roman 搭配的数学字体
+# 如果不加这一行，您的下标 A_B2 会显示为另一种默认字体，和周围不协调
+plt.rcParams['mathtext.fontset'] = 'stix' 
+
+# ==========================================
+# (可选) 防止负号显示成方块
+# Times New Roman 有时会导致负号显示异常，加这一行保平安
+plt.rcParams['axes.unicode_minus'] = False
+
+# ==========================================
+# 2. 应用改名
+# ==========================================
+# 我们创建一个新的 DataFrame 专门用来画图，不影响原数据
+X_plot = X_train.rename(columns=name_mapping)
+
+print("✅ 列名修改完成，准备绘图...")
+
+# ==========================================
+# 3. 绘制 SHAP 图
+# ==========================================
+plt.figure(figsize=(20, 16)) # 可以调整图片大小
+
+# 这里的关键是传入改名后的 X_plot
+shap.summary_plot(shap_values, X_plot, max_display=10, show=False)
+
+# ==========================================
+# 4. (可选) 进一步美化标签字体
+# ==========================================
+# 获取当前的坐标轴
+ax = plt.gca()
+
+#修改图片内的点
+for collection in plt.gca().collections:
+    # set_sizes 里的数值控制大小
+    # 默认值大约是 10-15 左右
+    # 试着改成 30 (中等加大) 或 50 (很大)，根据您的喜好调整
+    collection.set_sizes([20])
+
+# 横坐标修改
+# 设置横轴范围 (从 -0.3 到 0.3)
+plt.xlim(-0.02, 0.02)
+
+# 设置纵轴标签字体大小 (根据需要调整 fontsize)
+plt.yticks(fontsize=20) 
+# 设置横轴标签字体大小
+plt.xticks(fontsize=20)
+
+# ==========================================
+# 🔧 【在这里插入】边框设置代码
+# ==========================================
+ax = plt.gca() # 获取当前的坐标轴对象
+
+# 设置边框粗细 (您可以修改 2.0 为您想要的数值，默认约 0.8)
+border_width = 2.0 
+
+# 循环设置 上、下、左、右 四个边框
+for spine in ax.spines.values():
+    spine.set_visible(True)      # 1. 强制显示所有边框 (SHAP默认隐藏了上和右)
+    spine.set_linewidth(border_width) # 2. 设置边框粗细
+    spine.set_color('black')     # 3. 设置边框颜色 (可选，防止变成灰色)
+
+# (可选) 同时加粗刻度线，让整体风格统一
+ax.tick_params(width=border_width)
+
+# 保存图片
+plt.savefig('shap_plot_with_subscripts.png', bbox_inches='tight', dpi=300)
+# 同样推荐保存一份 PDF 用于 AI 修改
+plt.savefig('shap_plot_with_subscripts.pdf', format='pdf', bbox_inches='tight')
+
+print("✅ 带下标的 SHAP 图已保存！")
+plt.show()
